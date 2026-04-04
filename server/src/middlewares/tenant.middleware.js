@@ -1,29 +1,35 @@
-// This middleware is optional if we trust req.tenantId from auth,
-// but can be used for public routes where tenant is derived from URL/header
 import Tenant from '../modules/tenant/tenant.model.js';
 
 export const resolveTenant = async (req, res, next) => {
-    // 1. Check if auth middleware already populated it
-    if (req.tenantId) {
-        return next();
-    }
-
-    // 2. Otherwise look for tenant domain/id in headers
-    const tenantIdHeader = req.headers['x-tenant-id'];
-    
-    if (!tenantIdHeader) {
-        return res.status(400).json({ message: 'Tenant context is missing. Please provide x-tenant-id header.' });
-    }
-
     try {
-        const tenant = await Tenant.findById(tenantIdHeader);
+        // 1. Find the tenant ID (Prefers Auth middleware, falls back to header)
+        const currentTenantId = req.tenantId || req.headers['x-tenant-id'];
+
+        if (!currentTenantId) {
+            return res.status(400).json({ 
+                message: 'Tenant context is missing. Authenticate or provide x-tenant-id header.' 
+            });
+        }
+
+        // 2. Fetch the tenant from DB to ensure it actually exists
+        const tenant = await Tenant.findById(currentTenantId);
+        
         if (!tenant) {
             return res.status(404).json({ message: 'Tenant not found' });
         }
-        
+
+        // 3. Keep the crucial business logic from the fix branch!
+        if (tenant.subscriptionStatus === 'suspended') {
+            return res.status(403).json({ message: 'Tenant subscription is suspended' });
+        }
+
+        // 4. Attach both the ID and the full object so downstream controllers have everything
         req.tenantId = tenant._id;
+        req.tenant = tenant;
+        
         next();
     } catch (error) {
-        res.status(500).json({ message: 'Error resolving tenant context' });
+        console.error('Tenant middleware error:', error);
+        return res.status(500).json({ message: 'Internal Server Error while resolving tenant' });
     }
 };

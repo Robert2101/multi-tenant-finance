@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
     tenantId: {
@@ -30,4 +30,4 @@ const userSchema = new mongoose.Schema({
 // Ensure email is unique within the same tenant
 userSchema.index({ tenantId: 1, email: 1 }, { unique: true });
 
-module.exports = mongoose.model('User', userSchema);
+export default mongoose.model('User', userSchema);
