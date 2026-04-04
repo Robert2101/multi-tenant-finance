@@ -1,6 +1,6 @@
-const User = require('./user.model');
-const Tenant = require('../tenant/tenant.model');
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
+import User from './user.model.js';
+import Tenant from '../tenant/tenant.model.js';
 
 const generateToken = (id, tenantId, role) => {
     return jwt.sign({ id, tenantId, role }, process.env.JWT_SECRET || 'secret', {
@@ -8,7 +8,7 @@ const generateToken = (id, tenantId, role) => {
     });
 };
 
-exports.registerUser = async (req, res) => {
+export const registerUser = async (req, res) => {
     try {
         const { name, email, password, tenantName } = req.body;
 
@@ -46,7 +46,7 @@ exports.registerUser = async (req, res) => {
     }
 };
 
-exports.loginUser = async (req, res) => {
+export const loginUser = async (req, res) => {
     try {
         const { email, password, tenantId } = req.body;
 
