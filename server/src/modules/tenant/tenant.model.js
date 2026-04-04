@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const tenantSchema = new mongoose.Schema({
     name: {
@@ -18,4 +18,4 @@ const tenantSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Tenant', tenantSchema);
+export default mongoose.model('Tenant', tenantSchema);

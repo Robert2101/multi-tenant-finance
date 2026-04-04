@@ -1,7 +1,6 @@
-const Tenant = require('./tenant.model');
+import Tenant from './tenant.model.js';
 
-// Get current tenant details
-exports.getTenantDetails = async (req, res) => {
+export const getTenantDetails = async (req, res) => {
     try {
         const tenant = await Tenant.findById(req.tenantId);
         if (!tenant) {
@@ -13,8 +12,7 @@ exports.getTenantDetails = async (req, res) => {
     }
 };
 
-// Update tenant settings (Admin only)
-exports.updateTenant = async (req, res) => {
+export const updateTenant = async (req, res) => {
     try {
         const { name, domain } = req.body;
         const tenant = await Tenant.findByIdAndUpdate(
