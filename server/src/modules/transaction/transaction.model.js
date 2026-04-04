@@ -39,6 +39,14 @@ const transactionSchema = new mongoose.Schema({
     },
     receiptUrl: {
         type: String // Optional link to an S3 bucket or similar
+    },
+    plaidTransactionId: {
+        type: String,
+        default: null
+    },
+    requiresReview: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 
