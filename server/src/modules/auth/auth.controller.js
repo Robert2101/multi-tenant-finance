@@ -33,13 +33,21 @@ export const registerUser = async (req, res) => {
             role: 'Admin' // First user becomes Admin
         });
 
+        const token = generateToken(user._id, user.tenantId, user.role);
+
+        res.cookie('jwt', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
+
         res.status(201).json({
             _id: user._id,
             name: user.name,
             email: user.email,
             role: user.role,
-            tenantId: user.tenantId,
-            token: generateToken(user._id, user.tenantId, user.role),
+            tenantId: user.tenantId
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -48,19 +56,29 @@ export const registerUser = async (req, res) => {
 
 export const loginUser = async (req, res) => {
     try {
-        const { email, password, tenantId } = req.body;
+        const { email, password } = req.body;
 
-        // Find user by email and tenant
-        const user = await User.findOne({ email, tenantId }).select('+password');
+        // Find user by email (globally unique per our compound index logic assumption, 
+        // or effectively unique if users only sign up once)
+        const user = await User.findOne({ email }).select('+password');
 
         if (user && user.password === password) {
+            const token = generateToken(user._id, user.tenantId, user.role);
+
+            // Set cookie
+            res.cookie('jwt', token, {
+                httpOnly: true,
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'strict',
+                maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+            });
+
             res.json({
                 _id: user._id,
                 name: user.name,
                 email: user.email,
                 role: user.role,
-                tenantId: user.tenantId,
-                token: generateToken(user._id, user.tenantId, user.role),
+                tenantId: user.tenantId
             });
         } else {
             res.status(401).json({ message: 'Invalid email or password' });
