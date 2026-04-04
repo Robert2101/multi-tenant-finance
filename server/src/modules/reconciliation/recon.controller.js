@@ -1,6 +1,7 @@
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import Tenant from '../tenant/tenant.model.js';
 import Transaction from '../transaction/transaction.model.js';
+import AuditLog from '../audit/audit.model.js';
 
 const configuration = new Configuration({
     basePath: PlaidEnvironments.sandbox,
@@ -83,6 +84,20 @@ export const syncTransactions = async (req, res) => {
                 match.status = 'reconciled';
                 match.plaidTransactionId = bankTx.transaction_id;
                 await match.save();
+
+                try {
+                    await AuditLog.create({
+                        tenantId: req.tenantId,
+                        userId: req.user._id,
+                        action: 'RECONCILE',
+                        targetModel: 'Transaction',
+                        targetId: match._id,
+                        changes: { new_status: 'reconciled', plaidTransactionId: bankTx.transaction_id }
+                    });
+                } catch (err) {
+                    console.error('AuditLog error during reconcile:', err);
+                }
+
                 reconciledCount++;
             } else {
                 // If NOT found: Insert as new transaction but flag as requires_review: true
