@@ -15,6 +15,14 @@ const tenantSchema = new mongoose.Schema({
         type: String,
         enum: ['active', 'trial', 'suspended'],
         default: 'trial'
+    },
+    lastCursor: {
+        type: String,
+        default: null
+    },
+    plaidAccessToken: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 
