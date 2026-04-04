@@ -4,8 +4,10 @@ import User from '../modules/auth/user.model.js';
 export const protect = async (req, res, next) => {
     let token;
 
-    // 1. Extract the token from the header
-    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    // 1. Extract the token from cookies OR the Authorization header
+    if (req.cookies && req.cookies.jwt) {
+        token = req.cookies.jwt;
+    } else if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
         token = req.headers.authorization.split(' ')[1];
     }
 

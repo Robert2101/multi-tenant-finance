@@ -14,6 +14,8 @@ import reportRoutes from './modules/reporting/report.routes.js';
 import { protect } from './middlewares/auth.middleware.js';
 import { resolveTenant } from './middlewares/tenant.middleware.js';
 
+import cookieParser from 'cookie-parser';
+
 dotenv.config();
 
 connectDB();
@@ -21,7 +23,8 @@ connectDB();
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(cookieParser());
+app.use(cors({ credentials: true, origin: true }));
 
 app.get('/api/health', (req, res) => {
     res.status(200).json({ status: 'success', message: 'API is running' });
