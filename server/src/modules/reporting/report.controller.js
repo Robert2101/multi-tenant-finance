@@ -1,4 +1,5 @@
 import Transaction from '../transaction/transaction.model.js';
+import { Parser } from 'json2csv';
 
 export const getPnl = async (req, res) => {
     try {
@@ -64,3 +65,32 @@ export const getBalanceSheet = async (req, res) => {
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 }
+
+export const exportPnlCsv = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+
+        if (!startDate || !endDate) {
+            return res.status(400).json({ message: 'startDate and endDate are required' });
+        }
+
+        const transactions = await Transaction.find({
+            tenantId: req.tenantId,
+            status: 'reconciled',
+            date: { $gte: new Date(startDate), $lte: new Date(endDate) }
+        }).select('date type category amount description -_id').lean();
+
+        if (transactions.length === 0) {
+            return res.status(404).json({ message: 'No data to export' });
+        }
+
+        const parser = new Parser({ fields: ['date', 'type', 'category', 'amount', 'description'] });
+        const csv = parser.parse(transactions);
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment('pnl-report.csv');
+        return res.send(csv);
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+};

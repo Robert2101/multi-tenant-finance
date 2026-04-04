@@ -1,4 +1,5 @@
 import Transaction from './transaction.model.js';
+import AuditLog from '../audit/audit.model.js';
 
 export const createTransaction = async (req, res) => {
     try {
@@ -13,6 +14,15 @@ export const createTransaction = async (req, res) => {
             description,
             date: date || Date.now(),
             receiptUrl
+        });
+
+        await AuditLog.create({
+            tenantId: req.tenantId,
+            userId: req.user._id,
+            action: 'CREATE',
+            targetModel: 'Transaction',
+            targetId: transaction._id,
+            changes: { new_data: req.body }
         });
 
         res.status(201).json(transaction);
@@ -48,6 +58,15 @@ export const updateTransaction = async (req, res) => {
             { new: true, runValidators: true }
         );
 
+        await AuditLog.create({
+            tenantId: req.tenantId,
+            userId: req.user._id,
+            action: 'UPDATE',
+            targetModel: 'Transaction',
+            targetId: transaction._id,
+            changes: { old_data: transaction, new_data: req.body }
+        });
+
         res.status(200).json(updatedTransaction);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -63,6 +82,16 @@ export const deleteTransaction = async (req, res) => {
         }
 
         await transaction.deleteOne();
+
+        await AuditLog.create({
+            tenantId: req.tenantId,
+            userId: req.user._id,
+            action: 'DELETE',
+            targetModel: 'Transaction',
+            targetId: transaction._id,
+            changes: { deleted_data: transaction }
+        });
+
         res.status(200).json({ message: 'Transaction removed' });
     } catch (error) {
         res.status(500).json({ message: error.message });

@@ -5,15 +5,16 @@ import {
     updateTransaction,
     deleteTransaction
 } from './transaction.controller.js';
+import { authorize } from '../../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
 router.route('/')
-    .post(createTransaction)
+    .post(authorize('Admin', 'Accountant'), createTransaction)
     .get(getTransactions);
 
 router.route('/:id')
-    .put(updateTransaction)
-    .delete(deleteTransaction);
+    .put(authorize('Admin', 'Accountant'), updateTransaction)
+    .delete(authorize('Admin'), deleteTransaction);
 
 export default router;
