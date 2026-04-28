@@ -12,6 +12,7 @@ import tenantRoutes from './modules/tenant/tenant.routes.js';
 import transactionRoutes from './modules/transaction/transaction.routes.js';
 import reconRoutes from './modules/reconciliation/recon.routes.js';
 import reportRoutes from './modules/reporting/report.routes.js';
+import auditRoutes from './modules/audit/audit.routes.js';
 
 // Middlewares
 import { protect } from './middlewares/auth.middleware.js';
@@ -35,6 +36,7 @@ app.use('/api/tenant', protect, resolveTenant, tenantRoutes);
 app.use('/api/transactions', protect, resolveTenant, transactionRoutes);
 app.use('/api/reconciliation', protect, resolveTenant, reconRoutes);
 app.use('/api/reports', protect, resolveTenant, reportRoutes);
+app.use('/api/audit', protect, resolveTenant, auditRoutes);
 
 const PORT = process.env.PORT || 5001;
 

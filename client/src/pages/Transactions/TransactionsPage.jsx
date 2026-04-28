@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, Pencil, Trash2, X, Filter, Search } from 'lucide-react';
 import api from '../../services/api';
+import useAuthStore from '../../store/authStore';
 
 const CATEGORIES = ['Sales', 'Consulting', 'Rent', 'Software', 'Utilities', 'Salaries', 'Marketing', 'Travel', 'Other'];
 
@@ -66,7 +66,7 @@ const Modal = ({ isOpen, onClose, onSave, editTx }) => {
       <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '520px', padding: '32px', margin: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ fontSize: '1.3rem' }}>{editTx ? 'Edit Transaction' : 'Add Transaction'}</h3>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold' }}>&times;</button>
         </div>
         {error && <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px' }}>{error}</div>}
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -74,7 +74,7 @@ const Modal = ({ isOpen, onClose, onSave, editTx }) => {
             {['income', 'expense'].map((t) => (
               <button key={t} type="button" onClick={() => setForm({ ...form, type: t })}
                 style={{ flex: 1, padding: '10px', border: '2px solid', borderColor: form.type === t ? (t === 'income' ? 'var(--success)' : 'var(--danger)') : 'var(--border-color)', background: form.type === t ? (t === 'income' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)') : 'transparent', color: form.type === t ? (t === 'income' ? 'var(--success)' : 'var(--danger)') : 'var(--text-secondary)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600', textTransform: 'capitalize' }}>
-                {t === 'income' ? '↑ Income' : '↓ Expense'}
+                {t === 'income' ? 'Income' : 'Expense'}
               </button>
             ))}
           </div>
@@ -107,12 +107,15 @@ const Modal = ({ isOpen, onClose, onSave, editTx }) => {
 };
 
 const TransactionsPage = () => {
+  const { user } = useAuthStore();
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editTx, setEditTx] = useState(null);
   const [filterType, setFilterType] = useState('all');
   const [search, setSearch] = useState('');
+  
+  const isViewer = user?.role === 'Viewer';
 
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
@@ -146,25 +149,28 @@ const TransactionsPage = () => {
 
   return (
     <div className="animate-fade-in">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-primary)', paddingBottom: '16px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 style={{ fontSize: '2rem', marginBottom: '8px' }}>Transactions</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Manage all income and expense records for this workspace.</p>
         </div>
-        <button onClick={() => { setEditTx(null); setModalOpen(true); }}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
-          <Plus size={18} /> Add Transaction
-        </button>
+        {!isViewer && (
+          <button onClick={() => { setEditTx(null); setModalOpen(true); }}
+            style={{ padding: '10px 20px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
+            Add Transaction
+          </button>
+        )}
       </div>
 
-      <div className="glass-panel" style={{ padding: '16px 24px', marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', padding: '8px 14px', flex: 1, minWidth: '200px' }}>
-          <Search size={16} color="var(--text-muted)" />
+      <div style={{ padding: '16px', marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', padding: '8px 14px', flex: 1, minWidth: '200px', border: '1px solid var(--border-color)' }}>
+          <span style={{color: 'var(--text-muted)'}}>Search</span>
           <input type="text" placeholder="Search by description or category..." value={search} onChange={(e) => setSearch(e.target.value)}
             style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: '0.9rem' }} />
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <Filter size={16} color="var(--text-muted)" />
+          <span style={{color: 'var(--text-muted)', fontSize: '0.85rem', marginRight: '8px'}}>Filter:</span>
           {['all', 'income', 'expense'].map((t) => (
             <button key={t} onClick={() => setFilterType(t)}
               style={{ padding: '6px 16px', borderRadius: 'var(--radius-full)', border: filterType === t ? 'none' : '1px solid var(--border-color)', background: filterType === t ? 'var(--accent-primary)' : 'transparent', color: filterType === t ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: '500', textTransform: 'capitalize', fontSize: '0.85rem' }}>{t}
@@ -172,8 +178,9 @@ const TransactionsPage = () => {
           ))}
         </div>
       </div>
+      </div>
 
-      <div className="glass-panel" style={{ overflow: 'hidden' }}>
+      <div style={{ overflow: 'hidden', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading transactions...</div>
         ) : filtered.length === 0 ? (
@@ -192,8 +199,8 @@ const TransactionsPage = () => {
               </thead>
               <tbody>
                 {filtered.map((tx) => (
-                  <tr key={tx._id} style={{ borderBottom: '1px solid var(--border-color)' }}
-                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                  <tr key={tx._id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'var(--transition)' }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
                     <td style={{ padding: '14px 20px', fontSize: '0.9rem' }}>{new Date(tx.date).toLocaleDateString()}</td>
                     <td style={{ padding: '14px 20px' }}>
@@ -208,10 +215,14 @@ const TransactionsPage = () => {
                       <span style={{ padding: '3px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: '600', background: tx.status === 'reconciled' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: tx.status === 'reconciled' ? 'var(--success)' : '#f59e0b' }}>{tx.status}</span>
                     </td>
                     <td style={{ padding: '14px 20px' }}>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => { setEditTx(tx); setModalOpen(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)', padding: '4px' }}><Pencil size={16} /></button>
-                        <button onClick={() => handleDelete(tx._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px' }}><Trash2 size={16} /></button>
-                      </div>
+                      {!isViewer ? (
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                          <button onClick={() => { setEditTx(tx); setModalOpen(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '0.85rem', fontWeight: '500' }}>Edit</button>
+                          <button onClick={() => handleDelete(tx._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', fontSize: '0.85rem', fontWeight: '500' }}>Delete</button>
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>View Only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

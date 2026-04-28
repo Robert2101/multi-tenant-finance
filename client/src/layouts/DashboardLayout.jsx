@@ -1,5 +1,4 @@
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Receipt, RefreshCcw, FileBarChart, Settings, LogOut, Wallet } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import api from '../services/api';
 
@@ -19,11 +18,11 @@ const DashboardLayout = () => {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'Transactions', path: '/dashboard/transactions', icon: <Receipt size={20} /> },
-    { name: 'Reconciliation', path: '/dashboard/reconciliation', icon: <RefreshCcw size={20} /> },
-    { name: 'Reports', path: '/dashboard/reports', icon: <FileBarChart size={20} /> },
-    { name: 'Settings', path: '/dashboard/settings', icon: <Settings size={20} /> },
+    { name: 'Dashboard', path: '/dashboard' },
+    { name: 'Transactions', path: '/dashboard/transactions' },
+    { name: 'Reconciliation', path: '/dashboard/reconciliation' },
+    { name: 'Reports', path: '/dashboard/reports' },
+    { name: 'Settings', path: '/dashboard/settings' },
   ];
 
   const userInitial = user?.name ? user.name.charAt(0).toUpperCase() : 'U';
@@ -40,10 +39,7 @@ const DashboardLayout = () => {
         padding: '24px 0'
       }}>
         <div style={{ padding: '0 24px', marginBottom: '32px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{ background: 'var(--accent-primary)', padding: '8px', borderRadius: '8px' }}>
-            <Wallet size={24} color="white" />
-          </div>
-          <span style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'var(--font-display)' }}>FinancePro</span>
+          <span style={{ fontSize: '1.25rem', fontWeight: '700', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>FinancePro</span>
         </div>
 
         <nav style={{ flex: 1, padding: '0 16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -65,10 +61,19 @@ const DashboardLayout = () => {
                   transition: 'var(--transition)',
                   textDecoration: 'none'
                 }}
-                onMouseOver={(e) => { if(!isActive) e.currentTarget.style.color = 'var(--text-primary)'; }}
-                onMouseOut={(e) => { if(!isActive) e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                onMouseOver={(e) => { 
+                  if(!isActive) {
+                    e.currentTarget.style.color = 'var(--text-primary)'; 
+                    e.currentTarget.style.background = 'var(--bg-tertiary)';
+                  }
+                }}
+                onMouseOut={(e) => { 
+                  if(!isActive) {
+                    e.currentTarget.style.color = 'var(--text-secondary)'; 
+                    e.currentTarget.style.background = 'transparent';
+                  }
+                }}
               >
-                {item.icon}
                 {item.name}
               </Link>
             );
@@ -96,7 +101,6 @@ const DashboardLayout = () => {
             onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
             onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
           >
-            <LogOut size={20} />
             Sign Out
           </button>
         </div>
@@ -118,9 +122,6 @@ const DashboardLayout = () => {
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: '0.9rem', fontWeight: '600', color: 'var(--text-primary)' }}>
                 {user?.name || 'User'}
-              </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--accent-primary)' }}>
-                {user?.role || 'Member'} · {user?.email || ''}
               </div>
             </div>
             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: 'white' }}>

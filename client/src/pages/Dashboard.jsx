@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { ArrowUpRight, ArrowDownRight, DollarSign, CreditCard, TrendingUp } from 'lucide-react';
 import {
   AreaChart,
   Area,
@@ -12,8 +11,8 @@ import {
 } from 'recharts';
 import api from '../services/api';
 
-const StatCard = ({ title, value, trend, isPositive, icon, loading }) => (
-  <div className="glass-panel" style={{ padding: '24px', flex: 1, minWidth: '240px' }}>
+const StatCard = ({ title, value, trend, isPositive, loading }) => (
+  <div style={{ padding: '24px', flex: 1, minWidth: '240px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
       <div>
         <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: '500', marginBottom: '4px' }}>{title}</p>
@@ -23,21 +22,15 @@ const StatCard = ({ title, value, trend, isPositive, icon, loading }) => (
           <h3 style={{ fontSize: '1.8rem', fontWeight: '700', color: 'var(--text-primary)' }}>{value}</h3>
         )}
       </div>
-      <div style={{ background: 'var(--bg-tertiary)', padding: '12px', borderRadius: '12px', color: 'var(--accent-primary)' }}>
-        {icon}
-      </div>
     </div>
-    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
       {!loading && (
         <>
           <span style={{ 
-            display: 'flex', alignItems: 'center', 
             color: isPositive ? 'var(--success)' : 'var(--danger)',
-            background: isPositive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-            padding: '2px 8px', borderRadius: 'var(--radius-full)', fontWeight: '600'
+            fontWeight: '600'
           }}>
-            {isPositive ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-            {trend}
+            {isPositive ? '+' : '-'}{trend}
           </span>
           <span style={{ color: 'var(--text-muted)' }}>reconciled transactions</span>
         </>
@@ -116,17 +109,15 @@ const Dashboard = () => {
         <StatCard
           title="Total Revenue"
           value={formatCurrency(summary?.totalIncome)}
-          trend={`${summary?.reconciledCount || 0} reconciled`}
+          trend={`${summary?.reconciledCount || 0}`}
           isPositive={true}
-          icon={<DollarSign size={24} />}
           loading={loading}
         />
         <StatCard
           title="Total Expenses"
           value={formatCurrency(summary?.totalExpense)}
-          trend={`${summary?.pendingCount || 0} pending`}
+          trend={`${summary?.pendingCount || 0}`}
           isPositive={false}
-          icon={<CreditCard size={24} />}
           loading={loading}
         />
         <StatCard
@@ -134,18 +125,16 @@ const Dashboard = () => {
           value={formatCurrency(summary?.netProfit)}
           trend={summary?.netProfit >= 0 ? 'Positive' : 'Negative'}
           isPositive={(summary?.netProfit || 0) >= 0}
-          icon={<TrendingUp size={24} />}
           loading={loading}
         />
       </div>
 
       <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
         {/* Chart */}
-        <div className="glass-panel" style={{ flex: 2, minWidth: '400px', height: '400px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
-          <h3 style={{ marginBottom: '16px' }}>Cash Flow Overview</h3>
+        <div style={{ flex: 2, minWidth: '400px', height: '400px', padding: '24px', display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
+          <h3 style={{ marginBottom: '16px', fontSize: '1.1rem' }}>Cash Flow Overview</h3>
           {chartData.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', flexDirection: 'column', gap: '8px' }}>
-              <TrendingUp size={40} opacity={0.3} />
               <p>Add transactions to see your cash flow chart</p>
             </div>
           ) : (
@@ -153,30 +142,30 @@ const Dashboard = () => {
               <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#7c3aed" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
                   </linearGradient>
                   <linearGradient id="colorExpenses" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    <stop offset="5%" stopColor="#dc2626" stopOpacity={0.15} />
+                    <stop offset="95%" stopColor="#dc2626" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
                 <XAxis dataKey="month" stroke="var(--text-muted)" tick={{ fontSize: 12 }} />
                 <YAxis stroke="var(--text-muted)" tick={{ fontSize: 12 }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend wrapperStyle={{ color: 'var(--text-secondary)' }} />
-                <Area type="monotone" dataKey="Income" stroke="#7c3aed" strokeWidth={2} fill="url(#colorIncome)" />
-                <Area type="monotone" dataKey="Expenses" stroke="#ef4444" strokeWidth={2} fill="url(#colorExpenses)" />
+                <Area type="monotone" dataKey="Income" stroke="#2563eb" strokeWidth={2} fill="url(#colorIncome)" />
+                <Area type="monotone" dataKey="Expenses" stroke="#dc2626" strokeWidth={2} fill="url(#colorExpenses)" />
               </AreaChart>
             </ResponsiveContainer>
           )}
         </div>
 
         {/* Recent Transactions */}
-        <div className="glass-panel" style={{ flex: 1, minWidth: '300px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ flex: 1, minWidth: '300px', padding: '24px', display: 'flex', flexDirection: 'column', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3>Recent Transactions</h3>
+            <h3 style={{ fontSize: '1.1rem' }}>Recent Transactions</h3>
             <a href="/dashboard/transactions" style={{ fontSize: '0.85rem', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'none' }}>View All</a>
           </div>
 

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Building2, Save, User, Shield } from 'lucide-react';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 import UsersInvites from './UsersInvites';
+import AuditLogs from './AuditLogs';
 
 const inputStyle = {
   width: '100%',
@@ -61,45 +61,35 @@ const SettingsPage = () => {
         <p style={{ color: 'var(--text-secondary)' }}>Manage your tenant workspace and account preferences.</p>
       </div>
 
-      <div style={{ display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }}>
         {/* Workspace Settings */}
-        <div className="glass-panel" style={{ flex: 2, minWidth: '300px', padding: '28px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-            <div style={{ background: 'var(--bg-tertiary)', padding: '10px', borderRadius: '10px' }}><Building2 size={22} color="var(--accent-primary)" /></div>
-            <div>
-              <h3 style={{ fontSize: '1.1rem' }}>Workspace Settings</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Update your tenant workspace details</p>
-            </div>
-          </div>
+        <div style={{ padding: '24px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '4px' }}>Workspace</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '24px' }}>Manage your tenant workspace details.</p>
 
           {message && (
-            <div style={{ padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', background: message.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: message.type === 'success' ? 'var(--success)' : 'var(--danger)', border: `1px solid ${message.type === 'success' ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}` }}>
+            <div style={{ padding: '12px 16px', borderRadius: '8px', marginBottom: '20px', background: message.type === 'success' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: message.type === 'success' ? 'var(--success)' : 'var(--danger)' }}>
               {message.text}
             </div>
           )}
 
           {loading ? (
-            <div style={{ color: 'var(--text-muted)' }}>Loading workspace info...</div>
+            <div style={{ color: 'var(--text-muted)' }}>Loading...</div>
           ) : (
-            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Workspace / Company Name</label>
-                <input type="text" required style={inputStyle} value={tenantName} onChange={(e) => setTenantName(e.target.value)} placeholder="Acme Corp" />
+                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Company Name</label>
+                <input type="text" required style={inputStyle} value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
               </div>
               <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Subscription Status</label>
+                <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Subscription Status</label>
                 <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: tenant?.subscriptionStatus === 'active' ? 'var(--success)' : '#f59e0b', display: 'inline-block' }} />
-                  <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{tenant?.subscriptionStatus || 'trial'}</span>
+                  <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize', fontSize: '0.9rem' }}>{tenant?.subscriptionStatus || 'trial'}</span>
                 </div>
               </div>
-              <div>
-                <label style={{ display: 'block', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Tenant ID</label>
-                <input readOnly style={{ ...inputStyle, color: 'var(--text-muted)', fontSize: '0.8rem', cursor: 'default' }} value={user?.tenantId || ''} />
-              </div>
               <button type="submit" disabled={saving}
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600', opacity: saving ? 0.7 : 1 }}>
-                <Save size={18} />
+                style={{ marginTop: '8px', padding: '10px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600' }}>
                 {saving ? 'Saving...' : 'Save Changes'}
               </button>
             </form>
@@ -107,41 +97,31 @@ const SettingsPage = () => {
         </div>
 
         {/* Account Info */}
-        <div style={{ flex: 1, minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div className="glass-panel" style={{ padding: '28px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ background: 'var(--bg-tertiary)', padding: '10px', borderRadius: '10px' }}><User size={22} color="var(--accent-primary)" /></div>
-              <h3 style={{ fontSize: '1.1rem' }}>Account Info</h3>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {[
-                { label: 'Name', value: user?.name },
-                { label: 'Email', value: user?.email },
-                { label: 'User ID', value: user?._id, small: true },
-              ].map((item) => (
-                <div key={item.label}>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '4px' }}>{item.label}</p>
-                  <p style={{ fontWeight: '500', fontSize: item.small ? '0.78rem' : '0.95rem', color: item.small ? 'var(--text-secondary)' : 'var(--text-primary)', wordBreak: 'break-all' }}>{item.value || '—'}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+        <div style={{ padding: '24px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: '4px' }}>My Account</h3>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '24px' }}>Personal information and role.</p>
 
-          <div className="glass-panel" style={{ padding: '28px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ background: 'var(--bg-tertiary)', padding: '10px', borderRadius: '10px' }}><Shield size={22} color="var(--success)" /></div>
-              <h3 style={{ fontSize: '1.1rem' }}>Role & Access</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '4px' }}>Name</p>
+              <p style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{user?.name || '—'}</p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 'var(--radius-md)' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--success)', display: 'inline-block' }} />
-              <span style={{ fontWeight: '600', color: 'var(--success)' }}>{user?.role || 'Admin'}</span>
-              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>· Full Access</span>
+            <div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '4px' }}>Email</p>
+              <p style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{user?.email || '—'}</p>
+            </div>
+            <div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '4px' }}>Role</p>
+              <div style={{ display: 'inline-flex', padding: '4px 10px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-full)', fontSize: '0.85rem', fontWeight: '500' }}>
+                {user?.role || 'Admin'}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       <UsersInvites />
+      <AuditLogs />
       
     </div>
   );
