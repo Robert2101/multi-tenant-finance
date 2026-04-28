@@ -1,9 +1,43 @@
 import Transaction from '../transaction/transaction.model.js';
 import { Parser } from 'json2csv';
 
-export const getPnl = async (req, res) => {
+// NEW: Dashboard Summary — used by the Dashboard page
+export const getDashboardSummary = async (req, res) => {
     try {
         const { tenantId } = req;
+
+        const allTx = await Transaction.find({ tenantId });
+
+        let totalIncome = 0;
+        let totalExpense = 0;
+        let reconciledCount = 0;
+        let pendingCount = 0;
+
+        allTx.forEach((tx) => {
+            if (tx.type === 'income') totalIncome += tx.amount;
+            else totalExpense += tx.amount;
+            if (tx.status === 'reconciled') reconciledCount++;
+            else pendingCount++;
+        });
+
+        const netProfit = totalIncome - totalExpense;
+
+        return res.status(200).json({
+            totalIncome,
+            totalExpense,
+            netProfit,
+            reconciledCount,
+            pendingCount,
+            totalTransactions: allTx.length,
+        });
+    } catch (error) {
+        console.error('Error generating dashboard summary:', error);
+        return res.status(500).json({ message: 'Internal Server Error' });
+    }
+};
+
+export const getPnl = async (req, res) => {
+    try {
         const { startDate, endDate } = req.query;
 
         if (!startDate || !endDate) {
@@ -12,18 +46,16 @@ export const getPnl = async (req, res) => {
 
         const pnlData = await Transaction.aggregate([
             {
-                // Step 1: Filter
                 $match: {
-                    tenantId: req.tenantId, // From middleware
+                    tenantId: req.tenantId,
                     date: { $gte: new Date(startDate), $lte: new Date(endDate) },
-                    status: 'reconciled' // Only calculate verified money
+                    status: 'reconciled'
                 }
             },
             {
-                // Step 2: Group and Math
                 $group: {
-                    _id: "$type", // Groups into 'credit'/'income' and 'debit'/'expense'
-                    total: { $sum: "$amount" }
+                    _id: '$type',
+                    total: { $sum: '$amount' }
                 }
             }
         ]);
@@ -32,9 +64,9 @@ export const getPnl = async (req, res) => {
         let totalExpense = 0;
 
         pnlData.forEach(item => {
-            if (item._id === 'income' || item._id === 'credit') {
+            if (item._id === 'income') {
                 totalIncome = item.total;
-            } else if (item._id === 'expense' || item._id === 'debit') {
+            } else if (item._id === 'expense') {
                 totalExpense = item.total;
             }
         });
@@ -54,17 +86,12 @@ export const getPnl = async (req, res) => {
 };
 
 export const getBalanceSheet = async (req, res) => {
-    // Basic balance sheet implementation logic 
-    // Usually involves assets, liabilities, equity, but for this simple app, 
-    // it might just return total reconciled transactions vs pending or something.
-    // I'll provide a placeholder or return success
     try {
-        // Using sample aggregation if required, for now just placeholder
         return res.status(200).json({ success: true, message: 'Balance Sheet Engine ready' });
     } catch(e) {
         return res.status(500).json({ message: 'Internal Server Error' });
     }
-}
+};
 
 export const exportPnlCsv = async (req, res) => {
     try {
@@ -81,7 +108,7 @@ export const exportPnlCsv = async (req, res) => {
         }).select('date type category amount description -_id').lean();
 
         if (transactions.length === 0) {
-            return res.status(404).json({ message: 'No data to export' });
+            return res.status(404).json({ message: 'No reconciled data to export for this period' });
         }
 
         const parser = new Parser({ fields: ['date', 'type', 'category', 'amount', 'description'] });

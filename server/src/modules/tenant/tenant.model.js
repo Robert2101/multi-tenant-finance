@@ -23,6 +23,10 @@ const tenantSchema = new mongoose.Schema({
     plaidAccessToken: {
         type: String,
         default: null
+    },
+    plaidInstitutionName: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 

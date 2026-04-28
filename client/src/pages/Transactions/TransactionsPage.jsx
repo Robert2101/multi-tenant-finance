@@ -1,0 +1,229 @@
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Pencil, Trash2, X, Filter, Search } from 'lucide-react';
+import api from '../../services/api';
+
+const CATEGORIES = ['Sales', 'Consulting', 'Rent', 'Software', 'Utilities', 'Salaries', 'Marketing', 'Travel', 'Other'];
+
+const formatCurrency = (val) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+
+const inputStyle = {
+  width: '100%',
+  padding: '10px 14px',
+  background: 'var(--bg-primary)',
+  border: '1px solid var(--border-color)',
+  borderRadius: 'var(--radius-md)',
+  color: 'var(--text-primary)',
+  fontSize: '0.95rem',
+  outline: 'none',
+  boxSizing: 'border-box',
+};
+
+const Modal = ({ isOpen, onClose, onSave, editTx }) => {
+  const [form, setForm] = useState({
+    type: 'income', amount: '', category: 'Sales', description: '',
+    date: new Date().toISOString().split('T')[0]
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (editTx) {
+      setForm({
+        type: editTx.type, amount: editTx.amount, category: editTx.category,
+        description: editTx.description || '',
+        date: new Date(editTx.date).toISOString().split('T')[0],
+      });
+    } else {
+      setForm({ type: 'income', amount: '', category: 'Sales', description: '', date: new Date().toISOString().split('T')[0] });
+    }
+    setError('');
+  }, [editTx, isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      if (editTx) {
+        await api.put(`/transactions/${editTx._id}`, form);
+      } else {
+        await api.post('/transactions', form);
+      }
+      onSave();
+      onClose();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save transaction');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+      <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '520px', padding: '32px', margin: '20px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+          <h3 style={{ fontSize: '1.3rem' }}>{editTx ? 'Edit Transaction' : 'Add Transaction'}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={20} /></button>
+        </div>
+        {error && <div style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', padding: '10px 14px', borderRadius: '8px', marginBottom: '16px' }}>{error}</div>}
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {['income', 'expense'].map((t) => (
+              <button key={t} type="button" onClick={() => setForm({ ...form, type: t })}
+                style={{ flex: 1, padding: '10px', border: '2px solid', borderColor: form.type === t ? (t === 'income' ? 'var(--success)' : 'var(--danger)') : 'var(--border-color)', background: form.type === t ? (t === 'income' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)') : 'transparent', color: form.type === t ? (t === 'income' ? 'var(--success)' : 'var(--danger)') : 'var(--text-secondary)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600', textTransform: 'capitalize' }}>
+                {t === 'income' ? '↑ Income' : '↓ Expense'}
+              </button>
+            ))}
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Amount ($)</label>
+            <input type="number" min="0.01" step="0.01" required style={inputStyle} placeholder="0.00" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Category</label>
+            <select required style={{ ...inputStyle, appearance: 'none' }} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Description (optional)</label>
+            <input type="text" style={inputStyle} placeholder="e.g. Stripe payout for March" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+          </div>
+          <div>
+            <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Date</label>
+            <input type="date" required style={inputStyle} value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
+          </div>
+          <button type="submit" disabled={saving}
+            style={{ padding: '12px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', fontWeight: '600', fontSize: '1rem', cursor: saving ? 'not-allowed' : 'pointer', marginTop: '8px', opacity: saving ? 0.7 : 1 }}>
+            {saving ? 'Saving...' : editTx ? 'Update Transaction' : 'Add Transaction'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+const TransactionsPage = () => {
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editTx, setEditTx] = useState(null);
+  const [filterType, setFilterType] = useState('all');
+  const [search, setSearch] = useState('');
+
+  const fetchTransactions = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/transactions');
+      setTransactions(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchTransactions(); }, [fetchTransactions]);
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Delete this transaction?')) return;
+    try {
+      await api.delete(`/transactions/${id}`);
+      fetchTransactions();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Delete failed');
+    }
+  };
+
+  const filtered = transactions.filter((tx) => {
+    const matchType = filterType === 'all' || tx.type === filterType;
+    const matchSearch = !search || (tx.description?.toLowerCase().includes(search.toLowerCase()) || tx.category.toLowerCase().includes(search.toLowerCase()));
+    return matchType && matchSearch;
+  });
+
+  return (
+    <div className="animate-fade-in">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px', flexWrap: 'wrap', gap: '16px' }}>
+        <div>
+          <h1 style={{ fontSize: '2rem', marginBottom: '8px' }}>Transactions</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Manage all income and expense records for this workspace.</p>
+        </div>
+        <button onClick={() => { setEditTx(null); setModalOpen(true); }}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '12px 20px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
+          <Plus size={18} /> Add Transaction
+        </button>
+      </div>
+
+      <div className="glass-panel" style={{ padding: '16px 24px', marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', padding: '8px 14px', flex: 1, minWidth: '200px' }}>
+          <Search size={16} color="var(--text-muted)" />
+          <input type="text" placeholder="Search by description or category..." value={search} onChange={(e) => setSearch(e.target.value)}
+            style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: '0.9rem' }} />
+        </div>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <Filter size={16} color="var(--text-muted)" />
+          {['all', 'income', 'expense'].map((t) => (
+            <button key={t} onClick={() => setFilterType(t)}
+              style={{ padding: '6px 16px', borderRadius: 'var(--radius-full)', border: filterType === t ? 'none' : '1px solid var(--border-color)', background: filterType === t ? 'var(--accent-primary)' : 'transparent', color: filterType === t ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: '500', textTransform: 'capitalize', fontSize: '0.85rem' }}>{t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="glass-panel" style={{ overflow: 'hidden' }}>
+        {loading ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>Loading transactions...</div>
+        ) : filtered.length === 0 ? (
+          <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-muted)' }}>
+            {transactions.length === 0 ? 'No transactions yet. Add your first one!' : 'No transactions match your filter.'}
+          </div>
+        ) : (
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '700px' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  {['Date', 'Type', 'Category', 'Description', 'Amount', 'Status', 'Actions'].map((h) => (
+                    <th key={h} style={{ padding: '14px 20px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: '600', textTransform: 'uppercase' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((tx) => (
+                  <tr key={tx._id} style={{ borderBottom: '1px solid var(--border-color)' }}
+                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.02)'}
+                    onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
+                    <td style={{ padding: '14px 20px', fontSize: '0.9rem' }}>{new Date(tx.date).toLocaleDateString()}</td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <span style={{ padding: '3px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: '600', background: tx.type === 'income' ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', color: tx.type === 'income' ? 'var(--success)' : 'var(--danger)', textTransform: 'capitalize' }}>{tx.type}</span>
+                    </td>
+                    <td style={{ padding: '14px 20px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{tx.category}</td>
+                    <td style={{ padding: '14px 20px', fontSize: '0.9rem' }}>{tx.description || '—'}</td>
+                    <td style={{ padding: '14px 20px', fontWeight: '700', color: tx.type === 'income' ? 'var(--success)' : 'var(--danger)' }}>
+                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <span style={{ padding: '3px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: '600', background: tx.status === 'reconciled' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: tx.status === 'reconciled' ? 'var(--success)' : '#f59e0b' }}>{tx.status}</span>
+                    </td>
+                    <td style={{ padding: '14px 20px' }}>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button onClick={() => { setEditTx(tx); setModalOpen(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)', padding: '4px' }}><Pencil size={16} /></button>
+                        <button onClick={() => handleDelete(tx._id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', padding: '4px' }}><Trash2 size={16} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSave={fetchTransactions} editTx={editTx} />
+    </div>
+  );
+};
+
+export default TransactionsPage;
