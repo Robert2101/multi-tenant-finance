@@ -1,6 +1,9 @@
-import express from 'express';
 import dotenv from 'dotenv';
+dotenv.config(); // MUST BE AT THE VERY TOP
+
+import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import connectDB from './config/db.js';
 
 // Implemented routes
@@ -13,10 +16,6 @@ import reportRoutes from './modules/reporting/report.routes.js';
 // Middlewares
 import { protect } from './middlewares/auth.middleware.js';
 import { resolveTenant } from './middlewares/tenant.middleware.js';
-
-import cookieParser from 'cookie-parser';
-
-dotenv.config();
 
 connectDB();
 

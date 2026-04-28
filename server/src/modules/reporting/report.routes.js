@@ -1,7 +1,10 @@
 import express from 'express';
-import { getPnl, getBalanceSheet, exportPnlCsv } from './report.controller.js';
+import { getPnl, getBalanceSheet, exportPnlCsv, getDashboardSummary } from './report.controller.js';
 
 const router = express.Router();
+
+// GET /api/reports/dashboard-summary
+router.get('/dashboard-summary', getDashboardSummary);
 
 // GET /api/reports/pnl
 router.get('/pnl', getPnl);
