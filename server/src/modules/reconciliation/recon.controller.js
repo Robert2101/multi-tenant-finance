@@ -118,6 +118,9 @@ export const simulateBankFeed = async (req, res) => {
 export const reconcileOne = async (req, res) => {
     try {
         const tx = await Transaction.findOneAndUpdate({ _id: req.params.id, tenantId: req.tenantId }, { status: 'reconciled' }, { new: true });
+        if (!tx) {
+            return res.status(404).json({ message: 'Transaction not found' });
+        }
         res.json({ message: 'Reconciled', transaction: tx });
     } catch (e) { res.status(500).json({ message: 'Failed' }); }
 };
