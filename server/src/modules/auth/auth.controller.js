@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 import User from './user.model.js';
 import Tenant from '../tenant/tenant.model.js';
 
@@ -24,11 +25,13 @@ export const registerUser = async (req, res) => {
             return res.status(400).json({ message: 'User already exists in this tenant' });
         }
 
-        // Note: In production you would hash the password using bcrypt here!
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
         const user = await User.create({
             name,
             email,
-            password, // Storing in plain text for simplicity, add bcrypt in production
+            password: hashedPassword,
             tenantId: tenant._id,
             role: 'Admin' // First user becomes Admin
         });
@@ -62,7 +65,7 @@ export const loginUser = async (req, res) => {
         // or effectively unique if users only sign up once)
         const user = await User.findOne({ email }).select('+password');
 
-        if (user && user.password === password) {
+        if (user && (await bcrypt.compare(password, user.password))) {
             const token = generateToken(user._id, user.tenantId, user.role);
 
             // Set cookie
@@ -120,11 +123,14 @@ export const registerFromInvite = async (req, res) => {
             return res.status(400).json({ message: 'Invalid or expired invite token' });
         }
 
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
         // Create the user under the invited tenant
         const user = await User.create({
             name,
             email: invite.email,
-            password, // Use bcrypt in production!
+            password: hashedPassword,
             tenantId: invite.tenantId,
             role: invite.role
         });

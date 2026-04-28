@@ -87,8 +87,50 @@ export const getPnl = async (req, res) => {
 
 export const getBalanceSheet = async (req, res) => {
     try {
-        return res.status(200).json({ success: true, message: 'Balance Sheet Engine ready' });
-    } catch(e) {
+        const { endDate } = req.query;
+        
+        const dateFilter = endDate ? { $lte: new Date(endDate) } : { $lte: new Date() };
+
+        const transactions = await Transaction.find({
+            tenantId: req.tenantId,
+            date: dateFilter
+        });
+
+        let totalAssets = 0;
+        let totalLiabilities = 0;
+        let equity = 0;
+
+        transactions.forEach(tx => {
+            if (tx.status === 'reconciled') {
+                if (tx.type === 'income') {
+                    totalAssets += tx.amount;
+                    equity += tx.amount;
+                } else if (tx.type === 'expense') {
+                    totalAssets -= tx.amount;
+                    equity -= tx.amount;
+                }
+            } else if (tx.status === 'pending') {
+                if (tx.type === 'expense') {
+                    totalLiabilities += tx.amount;
+                } else if (tx.type === 'income') {
+                    totalAssets += tx.amount; // Accounts Receivable
+                    equity += tx.amount;
+                }
+            }
+        });
+
+        return res.status(200).json({
+            assets: totalAssets,
+            liabilities: totalLiabilities,
+            equity: equity,
+            breakdown: {
+                cashAndReceivables: totalAssets,
+                accountsPayable: totalLiabilities,
+                retainedEarnings: equity
+            }
+        });
+    } catch (error) {
+        console.error('Error generating Balance Sheet:', error);
         return res.status(500).json({ message: 'Internal Server Error' });
     }
 };
