@@ -1,11 +1,15 @@
 import express from 'express';
-import { registerUser, loginUser } from './auth.controller.js';
+import { registerUser, loginUser, validateInvite, registerFromInvite } from './auth.controller.js';
 import { protect } from '../../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+
+// Invite routes
+router.get('/invite/:token', validateInvite);
+router.post('/register-invite', registerFromInvite);
 
 // Check Auth Route
 router.get('/checkAuth', protect, (req, res) => {

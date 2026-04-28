@@ -4,6 +4,7 @@ import useAuthStore from './store/authStore';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Join from './pages/Auth/Join';
 import DashboardLayout from './layouts/DashboardLayout';
 import Dashboard from './pages/Dashboard';
 import TransactionsPage from './pages/Transactions/TransactionsPage';
@@ -29,6 +30,7 @@ function App() {
       <Route path="/" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Home />} />
       <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />} />
       <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />} />
+      <Route path="/join/:token" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Join />} />
 
       {/* Protected Dashboard Routes */}
       <Route element={<ProtectedRoute />}>

@@ -87,3 +87,69 @@ export const loginUser = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+import Invite from '../tenant/invite.model.js';
+
+export const validateInvite = async (req, res) => {
+    try {
+        const { token } = req.params;
+        
+        const invite = await Invite.findOne({ token, status: 'pending' }).populate('tenantId', 'name');
+        
+        if (!invite || invite.expiresAt < new Date()) {
+            return res.status(400).json({ message: 'Invalid or expired invite token' });
+        }
+
+        res.status(200).json({
+            email: invite.email,
+            role: invite.role,
+            tenantName: invite.tenantId.name
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+export const registerFromInvite = async (req, res) => {
+    try {
+        const { token, name, password } = req.body;
+        
+        const invite = await Invite.findOne({ token, status: 'pending' });
+        
+        if (!invite || invite.expiresAt < new Date()) {
+            return res.status(400).json({ message: 'Invalid or expired invite token' });
+        }
+
+        // Create the user under the invited tenant
+        const user = await User.create({
+            name,
+            email: invite.email,
+            password, // Use bcrypt in production!
+            tenantId: invite.tenantId,
+            role: invite.role
+        });
+
+        // Mark invite as accepted
+        invite.status = 'accepted';
+        await invite.save();
+
+        const authToken = generateToken(user._id, user.tenantId, user.role);
+
+        res.cookie('jwt', authToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
+
+        res.status(201).json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            tenantId: user.tenantId
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};

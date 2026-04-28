@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Building2, Save, User, Shield } from 'lucide-react';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
+import UsersInvites from './UsersInvites';
 
 const inputStyle = {
   width: '100%',
@@ -139,6 +140,9 @@ const SettingsPage = () => {
           </div>
         </div>
       </div>
+
+      <UsersInvites />
+      
     </div>
   );
 };
