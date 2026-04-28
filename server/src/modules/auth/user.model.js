@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['Admin', 'Accountant', 'Viewer'],
+        enum: ['Admin', 'Editor', 'Viewer'],
         default: 'Viewer'
     }
 }, { timestamps: true });
