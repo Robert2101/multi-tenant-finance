@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import api from '../../services/api';
 
-const formatCurrency = (val) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+const formatCurrency = (val, currency = 'USD') =>
+  new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency }).format(val || 0);
 
 const ReconciliationPage = () => {
   const [pending, setPending] = useState([]);
@@ -16,6 +16,43 @@ const ReconciliationPage = () => {
   const [linkToken, setLinkToken] = useState(null);
   const [isPlaidLoading, setIsPlaidLoading] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState({ connected: false, bankName: '' });
+  const [hasPendingSetuConsent, setHasPendingSetuConsent] = useState(false);
+  const [isSetuFetching, setIsSetuFetching] = useState(false);
+
+  const handleConnectIndianBank = async () => {
+    try {
+        const res = await api.post('/reconciliation/setu/consent');
+        localStorage.setItem('setuConsentId', res.data.consentId);
+        setHasPendingSetuConsent(true);
+        window.location.href = res.data.url;
+    } catch (error) {
+        console.error('FRONTEND SETU ERROR:', error.response?.data || error);
+        alert(`Failed to start Indian Bank sync: ${error.response?.data?.error || 'Server error'}`);
+    }
+  };
+
+  // Manual trigger — works even if redirect dropped the query params
+  const handleCompleteSetuImport = async () => {
+    const consentId = localStorage.getItem('setuConsentId');
+    if (!consentId) {
+      alert('No pending Indian Bank consent found. Please click Connect Indian Bank first.');
+      return;
+    }
+    setIsSetuFetching(true);
+    setResult(null);
+    try {
+      const res = await api.post('/reconciliation/setu/fetch', { consentId });
+      setResult({ type: 'success', message: res.data.message || 'Successfully imported Indian Bank data!' });
+      localStorage.removeItem('setuConsentId');
+      setHasPendingSetuConsent(false);
+      fetchData();
+    } catch (err) {
+      setResult({ type: 'error', message: err.response?.data?.error || 'Failed to fetch Setu data' });
+    } finally {
+      setIsSetuFetching(false);
+    }
+  };
+
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -40,6 +77,36 @@ const ReconciliationPage = () => {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // Check localStorage for a pending consent on every page load
+  useEffect(() => {
+    const saved = localStorage.getItem('setuConsentId');
+    if (saved) setHasPendingSetuConsent(true);
+  }, []);
+
+  const setuFetchedRef = React.useRef(false);
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('setu') === 'success' && !setuFetchedRef.current) {
+      setuFetchedRef.current = true; // Prevent duplicate calls
+      const fetchSetu = async () => {
+        try {
+          const consentId = urlParams.get('id') || localStorage.getItem('setuConsentId');
+          console.log('FRONTEND: Calling setu/fetch with consentId:', consentId);
+          const result = await api.post('/reconciliation/setu/fetch', { consentId });
+          console.log('FRONTEND: Setu fetch result:', result.data);
+          setResult({ type: 'success', message: result.data.message || 'Successfully imported Indian Bank data!' });
+          localStorage.removeItem('setuConsentId'); // Clean up
+          fetchData();
+        } catch (err) {
+          console.error('FRONTEND SETU FETCH ERROR:', err.response?.data || err);
+          setResult({ type: 'error', message: err.response?.data?.error || 'Failed to fetch Setu data' });
+        }
+        window.history.replaceState({}, document.title, window.location.pathname);
+      };
+      fetchSetu();
+    }
+  }, [fetchData]);
 
   // --- Plaid Integration Flow ---
 
@@ -157,6 +224,15 @@ const ReconciliationPage = () => {
                 style={{ opacity: connectionStatus.connected ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: connectionStatus.connected ? 'pointer' : 'not-allowed', fontWeight: '600' }}>
                 {simulating ? 'Syncing...' : 'Sync Real Transactions'}
             </button>
+            <button onClick={handleConnectIndianBank} className="button-primary" style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
+                Connect Indian Bank (UPI/Netbanking)
+            </button>
+            {hasPendingSetuConsent && (
+                <button onClick={handleCompleteSetuImport} disabled={isSetuFetching}
+                    style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #f97316, #ef4444)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', animation: 'pulse 2s infinite', boxShadow: '0 0 12px rgba(249,115,22,0.5)' }}>
+                    {isSetuFetching ? '⏳ Importing Data...' : '✅ Complete Indian Bank Import'}
+                </button>
+            )}
         </div>
       </div>
 
@@ -219,7 +295,7 @@ const ReconciliationPage = () => {
                     <td style={{ padding: '16px 20px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{tx.category}</td>
                     <td style={{ padding: '16px 20px', fontSize: '0.9rem' }}>{tx.description || '—'}</td>
                     <td style={{ padding: '16px 20px', fontWeight: '700', fontSize: '1rem', color: tx.type === 'income' ? 'var(--success)' : 'var(--danger)' }}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.category === 'Bank Import' ? 'INR' : 'USD')}
                     </td>
                     <td style={{ padding: '16px 20px' }}>
                       <button onClick={() => handleReconcileOne(tx._id)} disabled={reconciling === tx._id}

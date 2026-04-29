@@ -8,7 +8,13 @@ import {
     syncTransactions
 } from './recon.controller.js';
 
+import { createSetuConsent, fetchSetuData } from './setu.controller.js';
+
 const router = express.Router();
+
+// --- Setu (Indian Bank) Routes ---
+router.post('/setu/consent', createSetuConsent);
+router.post('/setu/fetch', fetchSetuData);
 
 // --- Plaid Integration Routes ---
 router.post('/create-link-token', createLinkToken);
