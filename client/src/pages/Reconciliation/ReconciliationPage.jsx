@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import api from '../../services/api';
+import useAuthStore from '../../store/authStore';
 
 const PER_PAGE = 10;
 
@@ -9,6 +10,9 @@ const formatCurrency = (val, currency = 'USD') =>
   new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency }).format(val || 0);
 
 const ReconciliationPage = () => {
+  const { user } = useAuthStore();
+  const isViewer = user?.role === 'Viewer';
+
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
@@ -231,30 +235,37 @@ const ReconciliationPage = () => {
         </div>
         
         <div style={{ display: 'flex', gap: '12px' }}>
-            {!connectionStatus.connected ? (
-                <button onClick={fetchLinkToken} disabled={isPlaidLoading}
-                    className="button-primary" style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
-                    Connect Real Bank
-                </button>
-            ) : (
-                <button onClick={fetchLinkToken} disabled={isPlaidLoading}
-                    style={{ padding: '10px 20px', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: '0.9rem' }}>
-                    Switch Bank
-                </button>
+            {!isViewer && (
+                <>
+                    {!connectionStatus.connected ? (
+                        <button onClick={fetchLinkToken} disabled={isPlaidLoading}
+                            className="button-primary" style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
+                            Connect Real Bank
+                        </button>
+                    ) : (
+                        <button onClick={fetchLinkToken} disabled={isPlaidLoading}
+                            style={{ padding: '10px 20px', background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontSize: '0.9rem' }}>
+                            Switch Bank
+                        </button>
+                    )}
+                    
+                    <button onClick={handleSyncPlaid} disabled={simulating || !connectionStatus.connected}
+                        style={{ opacity: connectionStatus.connected ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: connectionStatus.connected ? 'pointer' : 'not-allowed', fontWeight: '600' }}>
+                        {simulating ? 'Syncing...' : 'Sync Real Transactions'}
+                    </button>
+                    <button onClick={handleConnectIndianBank} className="button-primary" style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
+                        Connect Indian Bank
+                    </button>
+                    {hasPendingSetuConsent && (
+                        <button onClick={handleCompleteSetuImport} disabled={isSetuFetching}
+                            style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #f97316, #ef4444)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', animation: 'pulse 2s infinite', boxShadow: '0 0 12px rgba(249,115,22,0.5)' }}>
+                            {isSetuFetching ? '⏳ Importing Data...' : '✅ Complete Indian Bank Import'}
+                        </button>
+                    )}
+                </>
             )}
-            
-            <button onClick={handleSyncPlaid} disabled={simulating || !connectionStatus.connected}
-                style={{ opacity: connectionStatus.connected ? 1 : 0.5, display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 24px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: connectionStatus.connected ? 'pointer' : 'not-allowed', fontWeight: '600' }}>
-                {simulating ? 'Syncing...' : 'Sync Real Transactions'}
-            </button>
-            <button onClick={handleConnectIndianBank} className="button-primary" style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
-                Connect Indian Bank (UPI/Netbanking)
-            </button>
-            {hasPendingSetuConsent && (
-                <button onClick={handleCompleteSetuImport} disabled={isSetuFetching}
-                    style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #f97316, #ef4444)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', animation: 'pulse 2s infinite', boxShadow: '0 0 12px rgba(249,115,22,0.5)' }}>
-                    {isSetuFetching ? '⏳ Importing Data...' : '✅ Complete Indian Bank Import'}
-                </button>
+            {isViewer && connectionStatus.connected && (
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.9rem', alignSelf: 'center' }}>Bank connections are managed by Admins.</span>
             )}
         </div>
       </div>
@@ -271,20 +282,26 @@ const ReconciliationPage = () => {
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
               <span>Don't have a real bank?</span>
-              <button onClick={handleSimulate} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: '0.9rem', textDecoration: 'underline' }}>Simulate bank feed</button>
+              {!isViewer ? (
+                  <button onClick={handleSimulate} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: '0.9rem', textDecoration: 'underline' }}>Simulate bank feed</button>
+              ) : (
+                  <span>Wait for an Admin to simulate.</span>
+              )}
           </div>
 
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-            <button onClick={handleAutoReconcile} disabled={isAutoReconciling || pending.length === 0}
-              title="Matches bank imports against manually entered transactions by amount and date"
-              style={{ padding: '10px 20px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: pending.length === 0 ? 'not-allowed' : 'pointer', fontWeight: '600', opacity: pending.length === 0 ? 0.5 : 1 }}>
-              {isAutoReconciling ? 'Matching...' : 'Auto Reconcile'}
-            </button>
-            <button onClick={handleReconcileAll} disabled={reconciling === 'all' || pending.length === 0}
-              style={{ padding: '10px 20px', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
-              Reconcile All ({pending.length})
-            </button>
-          </div>
+          {!isViewer && (
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                <button onClick={handleAutoReconcile} disabled={isAutoReconciling || pending.length === 0}
+                title="Matches bank imports against manually entered transactions by amount and date"
+                style={{ padding: '10px 20px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: pending.length === 0 ? 'not-allowed' : 'pointer', fontWeight: '600', opacity: pending.length === 0 ? 0.5 : 1 }}>
+                {isAutoReconciling ? 'Matching...' : 'Auto Reconcile'}
+                </button>
+                <button onClick={handleReconcileAll} disabled={reconciling === 'all' || pending.length === 0}
+                style={{ padding: '10px 20px', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
+                Reconcile All ({pending.length})
+                </button>
+            </div>
+          )}
 
       </div>
 
@@ -329,10 +346,14 @@ const ReconciliationPage = () => {
                       {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.category === 'Bank Import' ? 'INR' : 'USD')}
                     </td>
                     <td style={{ padding: '16px 20px' }}>
-                      <button onClick={() => handleReconcileOne(tx._id)} disabled={reconciling === tx._id}
-                        style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: '500' }}>
-                        Reconcile
-                      </button>
+                      {!isViewer ? (
+                          <button onClick={() => handleReconcileOne(tx._id)} disabled={reconciling === tx._id}
+                            style={{ background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: '500' }}>
+                            Reconcile
+                          </button>
+                      ) : (
+                          <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>View Only</span>
+                      )}
                     </td>
                   </tr>
                 ))}

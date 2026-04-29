@@ -11,8 +11,12 @@ import {
 
 
 import { createSetuConsent, fetchSetuData } from './setu.controller.js';
+import { authorize } from '../../middlewares/auth.middleware.js';
 
 const router = express.Router();
+
+// Only Admins and Editors can perform reconciliation actions
+router.use(authorize('Admin', 'Editor'));
 
 // --- Setu (Indian Bank) Routes ---
 router.post('/setu/consent', createSetuConsent);
