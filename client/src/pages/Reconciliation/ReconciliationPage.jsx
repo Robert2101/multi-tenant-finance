@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { usePlaidLink } from 'react-plaid-link';
 import api from '../../services/api';
 
+const PER_PAGE = 10;
+
+
 const formatCurrency = (val, currency = 'USD') =>
   new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency }).format(val || 0);
 
@@ -10,7 +13,11 @@ const ReconciliationPage = () => {
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
   const [reconciling, setReconciling] = useState(null);
+  const [isAutoReconciling, setIsAutoReconciling] = useState(false);
   const [result, setResult] = useState(null);
+  const [page, setPage] = useState(1);
+
+
   
   // Plaid & Connection state
   const [linkToken, setLinkToken] = useState(null);
@@ -60,6 +67,8 @@ const ReconciliationPage = () => {
       // 1. Fetch Transactions
       const txRes = await api.get('/transactions');
       setPending(txRes.data.filter((tx) => tx.status === 'pending'));
+      setPage(1);
+
 
       // 2. Fetch Tenant/Connection Status
       const tenantRes = await api.get('/tenant/me');
@@ -187,6 +196,20 @@ const ReconciliationPage = () => {
     finally { setReconciling(null); }
   };
 
+  const handleAutoReconcile = async () => {
+    setIsAutoReconciling(true);
+    setResult(null);
+    try {
+      const res = await api.post('/reconciliation/auto-reconcile');
+      setResult({ type: 'success', message: res.data.message });
+      fetchData();
+    } catch (err) {
+      setResult({ type: 'error', message: err.response?.data?.message || 'Auto-reconciliation failed' });
+    } finally {
+      setIsAutoReconciling(false);
+    }
+  };
+
   return (
     <div className="animate-fade-in">
       <div style={{ marginBottom: '32px' }}>
@@ -251,10 +274,18 @@ const ReconciliationPage = () => {
               <button onClick={handleSimulate} style={{ background: 'none', border: 'none', color: 'var(--accent-primary)', cursor: 'pointer', padding: 0, fontSize: '0.9rem', textDecoration: 'underline' }}>Simulate bank feed</button>
           </div>
 
-          <button onClick={handleReconcileAll} disabled={reconciling === 'all' || pending.length === 0}
-            style={{ padding: '10px 20px', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
-            Reconcile All ({pending.length})
-          </button>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <button onClick={handleAutoReconcile} disabled={isAutoReconciling || pending.length === 0}
+              title="Matches bank imports against manually entered transactions by amount and date"
+              style={{ padding: '10px 20px', background: 'var(--accent-primary)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)', cursor: pending.length === 0 ? 'not-allowed' : 'pointer', fontWeight: '600', opacity: pending.length === 0 ? 0.5 : 1 }}>
+              {isAutoReconciling ? 'Matching...' : 'Auto Reconcile'}
+            </button>
+            <button onClick={handleReconcileAll} disabled={reconciling === 'all' || pending.length === 0}
+              style={{ padding: '10px 20px', background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '600' }}>
+              Reconcile All ({pending.length})
+            </button>
+          </div>
+
       </div>
 
       {/* Pending Table */}
@@ -286,7 +317,7 @@ const ReconciliationPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {pending.map((tx) => (
+                {pending.slice((page-1)*PER_PAGE, page*PER_PAGE).map((tx) => (
                   <tr key={tx._id} className="table-row-hover" style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '16px 20px', fontSize: '0.9rem' }}>{new Date(tx.date).toLocaleDateString()}</td>
                     <td style={{ padding: '16px 20px' }}>
@@ -307,6 +338,23 @@ const ReconciliationPage = () => {
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination */}
+        {pending.length > PER_PAGE && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '20px', borderTop: '1px solid var(--border-color)' }}>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              style={{ padding: '8px 18px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: page === 1 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page === 1 ? 'not-allowed' : 'pointer', fontWeight: '500' }}>
+              Previous
+            </button>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+              Page {page} of {Math.ceil(pending.length / PER_PAGE)} &nbsp;·&nbsp; {pending.length} pending
+            </span>
+            <button onClick={() => setPage(p => Math.min(Math.ceil(pending.length / PER_PAGE), p + 1))} disabled={page === Math.ceil(pending.length / PER_PAGE)}
+              style={{ padding: '8px 18px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: page === Math.ceil(pending.length / PER_PAGE) ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page === Math.ceil(pending.length / PER_PAGE) ? 'not-allowed' : 'pointer', fontWeight: '500' }}>
+              Next
+            </button>
           </div>
         )}
       </div>

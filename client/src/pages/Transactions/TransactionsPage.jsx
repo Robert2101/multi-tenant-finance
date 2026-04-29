@@ -1,11 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
 import api from '../../services/api';
 import useAuthStore from '../../store/authStore';
 
+const PER_PAGE = 15;
+
+
 const CATEGORIES = ['Sales', 'Consulting', 'Rent', 'Software', 'Utilities', 'Salaries', 'Marketing', 'Travel', 'Other'];
 
-const formatCurrency = (val) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
+const formatCurrency = (val, currency = 'USD') =>
+  new Intl.NumberFormat(currency === 'INR' ? 'en-IN' : 'en-US', { style: 'currency', currency }).format(val || 0);
 
 const inputStyle = {
   width: '100%',
@@ -61,8 +65,8 @@ const Modal = ({ isOpen, onClose, onSave, editTx }) => {
     }
   };
 
-  return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+  return ReactDOM.createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
       <div className="glass-panel animate-fade-in" style={{ width: '100%', maxWidth: '520px', padding: '32px', margin: '20px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
           <h3 style={{ fontSize: '1.3rem' }}>{editTx ? 'Edit Transaction' : 'Add Transaction'}</h3>
@@ -102,7 +106,8 @@ const Modal = ({ isOpen, onClose, onSave, editTx }) => {
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -114,6 +119,7 @@ const TransactionsPage = () => {
   const [editTx, setEditTx] = useState(null);
   const [filterType, setFilterType] = useState('all');
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(1);
   
   const isViewer = user?.role === 'Viewer';
 
@@ -147,10 +153,13 @@ const TransactionsPage = () => {
     return matchType && matchSearch;
   });
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PER_PAGE));
+  const paginated = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+
   return (
     <div className="animate-fade-in">
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-primary)', paddingBottom: '16px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '16px' }}>
+      {/* Page header — NOT sticky, stays at top naturally */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
         <div>
           <h1 style={{ fontSize: '2rem', marginBottom: '8px' }}>Transactions</h1>
           <p style={{ color: 'var(--text-secondary)' }}>Manage all income and expense records for this workspace.</p>
@@ -163,21 +172,23 @@ const TransactionsPage = () => {
         )}
       </div>
 
-      <div style={{ padding: '16px', marginBottom: '24px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', padding: '8px 14px', flex: 1, minWidth: '200px', border: '1px solid var(--border-color)' }}>
-          <span style={{color: 'var(--text-muted)'}}>Search</span>
-          <input type="text" placeholder="Search by description or category..." value={search} onChange={(e) => setSearch(e.target.value)}
-            style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: '0.9rem' }} />
+      {/* Search + filter bar — sticky so it stays visible while scrolling the table */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg-primary)', paddingBottom: '16px' }}>
+        <div style={{ padding: '16px', display: 'flex', gap: '16px', flexWrap: 'wrap', alignItems: 'center', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', padding: '8px 14px', flex: 1, minWidth: '200px', border: '1px solid var(--border-color)' }}>
+            <span style={{color: 'var(--text-muted)'}}>Search</span>
+            <input type="text" placeholder="Search by description or category..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              style={{ background: 'none', border: 'none', outline: 'none', color: 'var(--text-primary)', width: '100%', fontSize: '0.9rem' }} />
+          </div>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span style={{color: 'var(--text-muted)', fontSize: '0.85rem', marginRight: '8px'}}>Filter:</span>
+            {['all', 'income', 'expense'].map((t) => (
+              <button key={t} onClick={() => { setFilterType(t); setPage(1); }}
+                style={{ padding: '6px 16px', borderRadius: 'var(--radius-full)', border: filterType === t ? 'none' : '1px solid var(--border-color)', background: filterType === t ? 'var(--accent-primary)' : 'transparent', color: filterType === t ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: '500', textTransform: 'capitalize', fontSize: '0.85rem' }}>{t}
+              </button>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <span style={{color: 'var(--text-muted)', fontSize: '0.85rem', marginRight: '8px'}}>Filter:</span>
-          {['all', 'income', 'expense'].map((t) => (
-            <button key={t} onClick={() => setFilterType(t)}
-              style={{ padding: '6px 16px', borderRadius: 'var(--radius-full)', border: filterType === t ? 'none' : '1px solid var(--border-color)', background: filterType === t ? 'var(--accent-primary)' : 'transparent', color: filterType === t ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: '500', textTransform: 'capitalize', fontSize: '0.85rem' }}>{t}
-            </button>
-          ))}
-        </div>
-      </div>
       </div>
 
       <div style={{ overflow: 'hidden', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)' }}>
@@ -198,7 +209,7 @@ const TransactionsPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((tx) => (
+                {paginated.map((tx) => (
                   <tr key={tx._id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'var(--transition)' }}
                     onMouseOver={(e) => e.currentTarget.style.background = 'var(--bg-tertiary)'}
                     onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}>
@@ -209,7 +220,7 @@ const TransactionsPage = () => {
                     <td style={{ padding: '14px 20px', fontSize: '0.9rem', color: 'var(--text-secondary)' }}>{tx.category}</td>
                     <td style={{ padding: '14px 20px', fontSize: '0.9rem' }}>{tx.description || '—'}</td>
                     <td style={{ padding: '14px 20px', fontWeight: '700', color: tx.type === 'income' ? 'var(--success)' : 'var(--danger)' }}>
-                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount)}
+                      {tx.type === 'income' ? '+' : '-'}{formatCurrency(tx.amount, tx.category === 'Bank Import' ? 'INR' : 'USD')}
                     </td>
                     <td style={{ padding: '14px 20px' }}>
                       <span style={{ padding: '3px 10px', borderRadius: 'var(--radius-full)', fontSize: '0.8rem', fontWeight: '600', background: tx.status === 'reconciled' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: tx.status === 'reconciled' ? 'var(--success)' : '#f59e0b' }}>{tx.status}</span>
@@ -231,6 +242,21 @@ const TransactionsPage = () => {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', marginTop: '24px', padding: '16px' }}>
+          <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+            style={{ padding: '8px 18px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: page === 1 ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page === 1 ? 'not-allowed' : 'pointer', fontWeight: '500' }}>
+            Previous
+          </button>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Page {page} of {totalPages} &nbsp;·&nbsp; {filtered.length} total</span>
+          <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+            style={{ padding: '8px 18px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', color: page === totalPages ? 'var(--text-muted)' : 'var(--text-primary)', cursor: page === totalPages ? 'not-allowed' : 'pointer', fontWeight: '500' }}>
+            Next
+          </button>
+        </div>
+      )}
 
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} onSave={fetchTransactions} editTx={editTx} />
     </div>

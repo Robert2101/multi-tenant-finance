@@ -131,3 +131,78 @@ export const reconcileAll = async (req, res) => {
         res.json({ message: `Reconciled ${result.modifiedCount} items` });
     } catch (e) { res.status(500).json({ message: 'Failed' }); }
 };
+
+// Auto-reconcile: match bank-imported transactions against manual entries
+export const autoReconcile = async (req, res) => {
+    try {
+        const { tenantId } = req;
+
+        // Bank-sourced: imported from Plaid or Setu
+        const bankTxns = await Transaction.find({
+            tenantId,
+            status: 'pending',
+            $or: [
+                { plaidTransactionId: { $ne: null } },
+                { category: 'Bank Import' }
+            ]
+        });
+
+        // Manually entered: no plaid ID and not a bank import
+        const manualTxns = await Transaction.find({
+            tenantId,
+            status: 'pending',
+            plaidTransactionId: null,
+            category: { $ne: 'Bank Import' }
+        });
+
+        const matchedBankIds = new Set();
+        const matchedManualIds = new Set();
+        let matchedCount = 0;
+
+        for (const bankTx of bankTxns) {
+            if (matchedBankIds.has(bankTx._id.toString())) continue;
+
+            for (const manualTx of manualTxns) {
+                if (matchedManualIds.has(manualTx._id.toString())) continue;
+
+                // Matching rules:
+                // 1. Same type (income / expense)
+                // 2. Amount within 5% tolerance (handles rounding/fees)
+                // 3. Date within ±3 days
+                const sameType = bankTx.type === manualTx.type;
+                const amountTolerance = manualTx.amount * 0.05;
+                const amountMatch = Math.abs(bankTx.amount - manualTx.amount) <= amountTolerance;
+                const daysDiff = Math.abs(
+                    new Date(bankTx.date).getTime() - new Date(manualTx.date).getTime()
+                ) / (1000 * 60 * 60 * 24);
+                const dateMatch = daysDiff <= 3;
+
+                if (sameType && amountMatch && dateMatch) {
+                    await Transaction.findByIdAndUpdate(bankTx._id, {
+                        status: 'reconciled',
+                        matchedTransactionId: manualTx._id
+                    });
+                    await Transaction.findByIdAndUpdate(manualTx._id, {
+                        status: 'reconciled',
+                        matchedTransactionId: bankTx._id
+                    });
+
+                    matchedBankIds.add(bankTx._id.toString());
+                    matchedManualIds.add(manualTx._id.toString());
+                    matchedCount++;
+                    break; // One-to-one matching — move to next bank tx
+                }
+            }
+        }
+
+        res.json({
+            message: `Auto-reconciled ${matchedCount} transaction pair${matchedCount !== 1 ? 's' : ''}. ${bankTxns.length - matchedCount} bank records had no match.`,
+            matchedCount,
+            unmatchedBankCount: bankTxns.length - matchedCount,
+            unmatchedManualCount: manualTxns.length - matchedCount
+        });
+    } catch (error) {
+        console.error('Auto-reconcile error:', error);
+        res.status(500).json({ message: 'Auto-reconciliation failed' });
+    }
+};

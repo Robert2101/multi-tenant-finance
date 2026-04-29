@@ -3,10 +3,12 @@ import {
     simulateBankFeed, 
     reconcileOne, 
     reconcileAll, 
+    autoReconcile,
     createLinkToken, 
     exchangePublicToken,
     syncTransactions
 } from './recon.controller.js';
+
 
 import { createSetuConsent, fetchSetuData } from './setu.controller.js';
 
@@ -25,5 +27,7 @@ router.post('/sync', syncTransactions);
 router.post('/simulate', simulateBankFeed);
 router.patch('/reconcile/:id', reconcileOne);
 router.post('/reconcile-all', reconcileAll);
+router.post('/auto-reconcile', autoReconcile);
+
 
 export default router;

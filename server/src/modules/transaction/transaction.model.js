@@ -47,6 +47,11 @@ const transactionSchema = new mongoose.Schema({
     requiresReview: {
         type: Boolean,
         default: false
+    },
+    matchedTransactionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Transaction',
+        default: null
     }
 }, { timestamps: true });
 
