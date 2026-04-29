@@ -182,7 +182,7 @@ const UsersInvites = () => {
               }}>
                 <div>
                   <p style={{ margin: '0 0 4px', fontSize: '0.82rem', fontWeight: 600, color: inviteMsg.type === 'success' ? 'var(--success)' : 'var(--danger)' }}>
-                    {inviteMsg.type === 'success' ? '✅ Invite link created!' : '❌ Error'}
+                    {inviteMsg.type === 'success' ? ' Invite link created!' : ' Error'}
                   </p>
                   <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', wordBreak: 'break-all' }}>
                     {inviteMsg.text}
@@ -288,7 +288,19 @@ const UsersInvites = () => {
                   Expires: {new Date(inv.expiresAt).toLocaleDateString()}
                 </div>
               </div>
-              <RoleBadge role={inv.role} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <RoleBadge role={inv.role} />
+                  <button onClick={() => {
+                      navigator.clipboard.writeText(`http://localhost:5173/join/${inv.token}`);
+                      alert('Invite link copied to clipboard!');
+                  }}
+                  style={{
+                      background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+                      padding: '6px 12px', borderRadius: 'var(--radius-md)', fontSize: '0.75rem', fontWeight: '600', cursor: 'pointer'
+                  }}>
+                      Copy Link
+                  </button>
+              </div>
             </div>
           ))}
         </div>

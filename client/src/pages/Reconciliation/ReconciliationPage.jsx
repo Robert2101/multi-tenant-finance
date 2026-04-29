@@ -259,7 +259,7 @@ const ReconciliationPage = () => {
                     {hasPendingSetuConsent && (
                         <button onClick={handleCompleteSetuImport} disabled={isSetuFetching}
                             style={{ padding: '10px 24px', display: 'flex', alignItems: 'center', gap: '8px', background: 'linear-gradient(135deg, #f97316, #ef4444)', color: '#fff', border: 'none', borderRadius: 'var(--radius-md)', cursor: 'pointer', fontWeight: '700', animation: 'pulse 2s infinite', boxShadow: '0 0 12px rgba(249,115,22,0.5)' }}>
-                            {isSetuFetching ? '⏳ Importing Data...' : '✅ Complete Indian Bank Import'}
+                            {isSetuFetching ? ' Importing Data...' : ' Complete Indian Bank Import'}
                         </button>
                     )}
                 </>
