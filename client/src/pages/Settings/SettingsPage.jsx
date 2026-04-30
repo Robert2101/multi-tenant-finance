@@ -24,6 +24,8 @@ const SettingsPage = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
+  const isAdmin = user?.role === 'Admin';
+
   useEffect(() => {
     const fetchTenant = async () => {
       try {
@@ -79,19 +81,26 @@ const SettingsPage = () => {
             <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Company Name</label>
-                <input type="text" required style={inputStyle} value={tenantName} onChange={(e) => setTenantName(e.target.value)} />
+                <input type="text" required style={{...inputStyle, opacity: isAdmin ? 1 : 0.6}} value={tenantName} onChange={(e) => setTenantName(e.target.value)} disabled={!isAdmin} />
               </div>
               <div>
                 <label style={{ display: 'block', marginBottom: '6px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Subscription Status</label>
-                <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ padding: '10px 14px', background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', gap: '8px', opacity: isAdmin ? 1 : 0.6 }}>
                   <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: tenant?.subscriptionStatus === 'active' ? 'var(--success)' : '#f59e0b', display: 'inline-block' }} />
                   <span style={{ color: 'var(--text-secondary)', textTransform: 'capitalize', fontSize: '0.9rem' }}>{tenant?.subscriptionStatus || 'trial'}</span>
                 </div>
               </div>
-              <button type="submit" disabled={saving}
-                style={{ marginTop: '8px', padding: '10px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600' }}>
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
+              
+              {!isAdmin && (
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '4px 0 0 0' }}>Only Admins can modify workspace settings.</p>
+              )}
+
+              {isAdmin && (
+                  <button type="submit" disabled={saving}
+                    style={{ marginTop: '8px', padding: '10px', background: 'var(--text-primary)', color: 'var(--bg-primary)', border: 'none', borderRadius: 'var(--radius-md)', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: '600' }}>
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+              )}
             </form>
           )}
         </div>

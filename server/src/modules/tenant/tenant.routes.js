@@ -3,11 +3,13 @@ import { getTenantDetails, updateTenant, createInvite, getInvites, getTenantUser
 
 const router = express.Router();
 
+import { authorize } from '../../middlewares/auth.middleware.js';
+
 // Both / and /me will now work to get workspace details
 router.get('/', getTenantDetails);
 router.get('/me', getTenantDetails); 
 
-router.put('/', updateTenant);
+router.put('/', authorize('Admin'), updateTenant);
 
 // User & Invite Management
 router.post('/invites', createInvite);
