@@ -404,7 +404,7 @@ sequenceDiagram
     React->>React: Logged in, redirect to /dashboard
 ```
 
-### Indian Bank Import (Setu Account Aggregator v2)
+### Indian Bank Import 
 
 ```mermaid
 sequenceDiagram
@@ -648,15 +648,3 @@ SETU_PRODUCT_INSTANCE_ID=
 | GET | /api/audit | Admin | Last 50 audit log entries |
 
 ---
-
-## Known Sandbox Constraints
-
-**Setu (Indian Bank)**
-- The redirect URL must be HTTPS in the Setu dashboard configuration. Since localhost does not have a valid SSL certificate, the browser will show an error after consent approval. Navigate to the URL manually after changing `https://` to `http://` in the address bar.
-- Setu sandbox test OTP is `123456` for all flows.
-- Accounts with `FAILUREXXXXX` in their masked number are intentionally broken test accounts. Select only accounts ending in `xx1870` or `xx1822`.
-- Each consent is single-use. If you get a "Consent use exceeded" error, start a new consent flow.
-
-**Plaid**
-- Using Plaid Sandbox. Any institution works. Test credentials are `user_good`.
-- The `lastCursor` on the Tenant document enables incremental sync — only new transactions are fetched on subsequent syncs.
